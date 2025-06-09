@@ -103,26 +103,25 @@ Swiggy-Analysis-with-Python/
 
 ### Splash Screen
 
-![Splash Screen](image.png)
+![Splash Screen](assets/screenshots/splash_screen.png)
 
 ### Login Page
 
-![Login Screen](image-1.png)
+![Login Screen](assets/screenshots/login_screen.png)
 
 ### Swiggy Data Analysis Dashboard
 
-![Swiggy Data Analysis Dashboard](image-2.png)
+![Swiggy Data Analysis Dashboard](assets/screenshots/swiggy_data_analysis_dashboard.png)
 
 ### Show Schema Page
 
-![Show Schema Page](image-3.png)
+![Show Schema Page](assets/screenshots/show_schema_page.png)
 
 ### Fetch Table Data Page
 
-![Fetch Table Data Page](image-4.png)
+![Fetch Table Data Page](assets/screenshots/fetch_table_data_page.png)
 
 ### Run Custom SQL Query
 
-![Run Custom SQL Query](image-5.png)
+![Run Custom SQL Query](assets/screenshots/run_custom_query_page.png)
 
-## Setup
