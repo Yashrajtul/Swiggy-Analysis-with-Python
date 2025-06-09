@@ -78,7 +78,27 @@ Swiggy-Analysis-with-Python/
 5. **Run the application**
    ```bash
    python app/app.py
-  
+
+## 🧪 Modules Breakdown
+
+| Module/File                            | Description                                                                                                                               |
+| -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `db/db_connection.py`                  | Contains the `SwiggyDBConnection` class that manages database connection, initialization, disconnection, and SQL query execution.         |
+| `app/app.py`                           | Main application file containing the `SwiggyApp` class, which builds the CTkinter GUI, manages navigation, and handles user interactions. |
+| `data/Swiggy_Analysis_Source_File.csv` | Source CSV file used for initial data population in the database during the setup or import process.                                      |
+
+
+## 🎯 Use Cases
+* Students practicing database integration with GUI
+* Data visualization enthusiasts interested in real-world restaurant data
+* Learners exploring Python + MySQL desktop applications
+
+## 📝 To-Do / Improvements
+* Add graph visualizations (matplotlib/seaborn)
+* Export query result as Excel
+
+
+
 ## Screenshots
 
 ### Splash Screen
