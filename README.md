@@ -27,7 +27,58 @@ A full-fledged Swiggy data analysis application built with Python and MySQL, fea
 
 ---
 
+## 📁 Project Structure
 
+Swiggy-Analysis-with-Python/
+
+<pre> ```bash 
+  Swiggy-Analysis-with-Python/ 
+  ├── db/ 
+  │ └── db_connection.py 
+  ├── assets/ 
+  │ └── swiggy.png 
+  │ └── ... 
+  ├── app/ 
+  │ └── app.py 
+  │ └── credentials/ 
+  │   └── credentials.json 
+  ├── data/ 
+  │ └── Swiggy_Analysis_Source_File.csv 
+  ├── notebooks/ 
+  │ └── swiggy_db.ipynb 
+  ├── requirements.txt 
+  ├── setup.sh 
+  └── README.md 
+  ``` </pre>
+
+---
+
+## ⚙️ Setup Instructions
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/YOUR_USERNAME/Swiggy-Analysis-with-Python.git
+   cd Swiggy-Analysis-with-Python
+
+2. **Create a virtual environment (recommended)**
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # Linux/macOS
+   venv\Scripts\activate     # Windows
+
+3. **Install dependencies**
+   ```bash
+   pip install -r requirements.txt
+
+4. **Configure the database**
+
+* Update the MySQL credentials in db_connection.py
+* Run provided SQL scripts (if any) to populate tables
+
+5. **Run the application**
+   ```bash
+   python app/app.py
+  
 ## Screenshots
 
 ### Splash Screen
