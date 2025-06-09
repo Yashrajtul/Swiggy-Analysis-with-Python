@@ -2,11 +2,6 @@ import atexit
 import mysql.connector
 from mysql.connector import Error
 
-# host = "localhost"
-# user = "root"
-# password = "Y@shtul9274"
-# database = "swiggy_py"
-
 # Database connection class
 # This class handles the connection to the MySQL database and provides methods to connect and disconnect.
 # It also includes error handling for connection issues.
@@ -534,15 +529,5 @@ class SwiggyDBConnection:
 
 
     
-# db_conn = SwiggyDBConnection(host, user, password, database)
-# db_conn.print_output(query="SELECT * FROM city;")
-# # db_conn.print_output(table_name="delivery", columns=("id", "availability"))
-# result = db_conn.fetch_query_result(query="SELECT name City FROM city;")
-# print(db_conn.cursor.description)
-
-# db_conn.print_results(db_conn.fetch_table_description("city"))
-
-# project.drop_tables()  # Drop existing tables if needed
-# project.initialize_database()
 
 
