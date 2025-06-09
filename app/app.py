@@ -289,6 +289,7 @@ class SwiggyApp(ctk.CTk):
 
     def show_schema_page(self):
         self.clear_window()
+        self.protocol("WM_DELETE_WINDOW", self.show_escape_to_main) 
         self.title("Show Schema - Swiggy Data Analysis")
         self._center_window(self, 1000, 700)
 
@@ -377,7 +378,14 @@ class SwiggyApp(ctk.CTk):
     
     def fetch_data_page(self):
         self.clear_frame(self.main_frame)
+        self.protocol("WM_DELETE_WINDOW", self.show_escape_to_main) 
         self._center_window(self, 750, 900)
+        
+        def escape_popup(event=None):
+            if messagebox.askyesno("Go Back", "Do you want to return to the main menu?"):
+                self.create_main_screen()
+
+        self.bind("<Escape>", escape_popup)
 
         # Title
         title_label = ctk.CTkLabel(self.main_frame, text="📊 Fetch Table Data", font=("Helvetica", 22, "bold"), text_color="#FFA500")
@@ -559,7 +567,14 @@ class SwiggyApp(ctk.CTk):
 
     def run_query_page(self):
         self.clear_frame(self.main_frame)
+        self.protocol("WM_DELETE_WINDOW", self.show_escape_to_main) 
         self._center_window(self, 700, 900)
+        
+        def escape_popup(event=None):
+            if messagebox.askyesno("Go Back", "Do you want to return to the main menu?"):
+                self.create_main_screen()
+
+        self.bind("<Escape>", escape_popup)
 
         # Title
         title_label = ctk.CTkLabel(self.main_frame, text="🧠 Run Custom SQL Query", font=("Helvetica", 22, "bold"), text_color="#FFA500")
@@ -670,6 +685,19 @@ class SwiggyApp(ctk.CTk):
             if self.db_connection:
                 self.db_connection.disconnect()
             self.create_login_screen()
+        else:  # No pressed, exit application
+            if self.db_connection:
+                self.db_connection.disconnect()
+            self.destroy()
+    
+    def show_escape_to_main(self, event=None):
+        response = messagebox.askyesnocancel("Escape Options", "Choose an action:\n\nYes: Back to Main Menu\nNo: Exit Application\nCancel: Stay", icon='question')
+        if response is None:  # Cancel pressed, do nothing
+            return
+        elif response:  # Yes pressed, disconnect and return to login
+            if self.db_connection:
+                self.db_connection.disconnect()
+            self.create_main_screen()
         else:  # No pressed, exit application
             if self.db_connection:
                 self.db_connection.disconnect()
