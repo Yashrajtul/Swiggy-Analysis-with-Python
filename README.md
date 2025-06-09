@@ -1,6 +1,34 @@
-# Swiggy-Analysis-with-Python
+# Swiggy Analysis with Python 🛵📊
 
-Executing MySQL queries using python and using tkinter to make a functionong UI
+A full-fledged Swiggy data analysis application built with Python and MySQL, featuring a modern GUI using `CTkinter`. This project enables interactive data visualization and insights generation from restaurant data sourced from Swiggy.
+
+---
+
+## 🚀 Features
+
+- ✅ **Login & Authentication System**
+- 📊 **Interactive GUI** using `CTkinter` with Swiggy-themed design
+- 🗂️ **Database Integration** with MySQL for seamless data management
+- 🔍 **Query Executor** with output display
+- 🧾 **Schema Visualization** to explore tables and relationships
+- 💾 **Data Import** functionality
+- 🖼️ **Splash Screen & Screensaver** with engaging UI/UX
+
+---
+
+## 🏗️ Tech Stack
+
+| Category        | Tools & Frameworks           |
+|----------------|-------------------------------|
+| **Frontend GUI** | Python `CTkinter`, PIL       |
+| **Backend**      | Python (OOP, MySQL Connector)|
+| **Database**     | MySQL                        |
+| **File Handling**| CSV, Text I/O                |
+
+---
+
+
+## Screenshots
 
 ### Splash Screen
 
@@ -25,3 +53,5 @@ Executing MySQL queries using python and using tkinter to make a functionong UI
 ### Run Custom SQL Query
 
 ![Run Custom SQL Query](image-5.png)
+
+## Setup
