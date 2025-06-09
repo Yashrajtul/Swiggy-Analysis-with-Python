@@ -11,19 +11,38 @@ A full-fledged Swiggy data analysis application built with Python and MySQL, fea
 - 🗂️ **Database Integration** with MySQL for seamless data management
 - 🔍 **Query Executor** with output display
 - 🧾 **Schema Visualization** to explore tables and relationships
-- 💾 **Data Import** functionality
+- 💾 Load initial data from CSV
 - 🖼️ **Splash Screen & Screensaver** with engaging UI/UX
 
 ---
 
-## 🏗️ Tech Stack
 
-| Category        | Tools & Frameworks           |
-|----------------|-------------------------------|
-| **Frontend GUI** | Python `CTkinter`, PIL       |
-| **Backend**      | Python (OOP, MySQL Connector)|
-| **Database**     | MySQL                        |
-| **File Handling**| CSV, Text I/O                |
+## Screenshots
+
+### Splash Screen
+
+![Splash Screen](assets/screenshots/splash_screen.png)
+
+### Login Page
+
+![Login Screen](assets/screenshots/login_screen.png)
+
+### Swiggy Data Analysis Dashboard
+
+![Swiggy Data Analysis Dashboard](assets/screenshots/swiggy_data_analysis_dashboard.png)
+
+### Show Schema Page
+
+![Show Schema Page](assets/screenshots/show_schema_page.png)
+
+### Fetch Table Data Page
+
+![Fetch Table Data Page](assets/screenshots/fetch_table_data_page.png)
+
+### Run Custom SQL Query
+
+![Run Custom SQL Query](assets/screenshots/run_custom_query_page.png)
+
 
 ---
 
@@ -31,25 +50,29 @@ A full-fledged Swiggy data analysis application built with Python and MySQL, fea
 
 Swiggy-Analysis-with-Python/
 
-<pre> ```bash 
-  Swiggy-Analysis-with-Python/ 
-  ├── db/ 
-  │ └── db_connection.py 
-  ├── assets/ 
-  │ └── swiggy.png 
-  │ └── ... 
-  ├── app/ 
-  │ └── app.py 
-  │ └── credentials/ 
-  │   └── credentials.json 
-  ├── data/ 
-  │ └── Swiggy_Analysis_Source_File.csv 
-  ├── notebooks/ 
-  │ └── swiggy_db.ipynb 
-  ├── requirements.txt 
-  ├── setup.sh 
-  └── README.md 
-  ``` </pre>
+    Swiggy-Analysis-with-Python/
+    ├── db/
+    │   └── db_connection.py
+    ├── assets/
+    │   └── swiggy.png
+    │   └── screenshots/
+    │       └── splash_screen.png
+    │       └── login_screen.png
+    │       └── swiggy_data_analysis_dashboard.png
+    │       └── show_schema_page.png
+    │       └── fetch_table_data_page.png
+    │       └── run_custom_query_page.png
+    ├── app/
+    │   ├── app.py
+    │   └── credentials/
+    │       └── credentials.json
+    ├── data/
+    │   └── Swiggy_Analysis_Source_File.csv
+    ├── notebooks/
+    │   └── swiggy_db.ipynb
+    ├── requirements.txt
+    ├── setup.sh
+    └── README.md
 
 ---
 
@@ -81,11 +104,13 @@ Swiggy-Analysis-with-Python/
 
 ## 🧪 Modules Breakdown
 
-| Module/File                            | Description                                                                                                                               |
-| -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `db/db_connection.py`                  | Contains the `SwiggyDBConnection` class that manages database connection, initialization, disconnection, and SQL query execution.         |
-| `app/app.py`                           | Main application file containing the `SwiggyApp` class, which builds the CTkinter GUI, manages navigation, and handles user interactions. |
-| `data/Swiggy_Analysis_Source_File.csv` | Source CSV file used for initial data population in the database during the setup or import process.                                      |
+| Module/File                            | Description                                                                                                                                    |
+| -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `db/db_connection.py`                  | Contains the `SwiggyDBConnection` class for connecting to MySQL, initializing tables, executing SQL queries, and managing connections.         |
+| `app/app.py`                           | Contains the `SwiggyApp` class, responsible for building the CTkinter GUI, managing user interface transitions, and integrating backend logic. |
+| `data/Swiggy_Analysis_Source_File.csv` | Initial dataset used for populating the database during setup.                                                                                 |
+| `notebooks/swiggy_db.ipynb`            | Jupyter notebook for exploratory data analysis and testing SQL queries during development.                                                     |
+| `assets/screenshots/`                  | Folder containing UI screenshots used in the README.                                                                                           |
 
 
 ## 🎯 Use Cases
@@ -95,33 +120,7 @@ Swiggy-Analysis-with-Python/
 
 ## 📝 To-Do / Improvements
 * Add graph visualizations (matplotlib/seaborn)
-* Export query result as Excel
-
-
-
-## Screenshots
-
-### Splash Screen
-
-![Splash Screen](assets/screenshots/splash_screen.png)
-
-### Login Page
-
-![Login Screen](assets/screenshots/login_screen.png)
-
-### Swiggy Data Analysis Dashboard
-
-![Swiggy Data Analysis Dashboard](assets/screenshots/swiggy_data_analysis_dashboard.png)
-
-### Show Schema Page
-
-![Show Schema Page](assets/screenshots/show_schema_page.png)
-
-### Fetch Table Data Page
-
-![Fetch Table Data Page](assets/screenshots/fetch_table_data_page.png)
-
-### Run Custom SQL Query
-
-![Run Custom SQL Query](assets/screenshots/run_custom_query_page.png)
+* Add export options for PDF/Excel
+* Add dark/light theme toggle
+* Include animated transitions and hover effects
 
