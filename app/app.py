@@ -614,9 +614,13 @@ class SwiggyApp(ctk.CTk):
 
         # Load query history
         self.query_history_file = os.path.join("queries", "query_history.json")
-        if not os.path.exists(self.query_history_file):
-            with open(self.query_history_file, "w") as f:
-                json.dump([], f)
+        try:
+            if not os.path.exists(self.query_history_file):
+                with open(self.query_history_file, "w") as f:
+                    json.dump([], f)
+        except Exception as e:
+            os.makedirs("queries", exist_ok=True)
+            print(e)
 
         # Title
         title_label = ctk.CTkLabel(self.main_frame, text="🧠 Run Custom SQL Query", font=("Helvetica", 22, "bold"), text_color="#FFA500")
