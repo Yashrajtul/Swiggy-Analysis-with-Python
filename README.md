@@ -37,7 +37,7 @@ A full-fledged Swiggy data analysis application built with Python and MySQL, fea
 
 ### Fetch Table Data Page
 
-![Fetch Table Data Page](assets/screenshots/fetch_table_data_page.png)
+![Fetch Table Data Page](assets/screenshots/fetch_table_data.png)
 
 ### Run Custom SQL Query
 
