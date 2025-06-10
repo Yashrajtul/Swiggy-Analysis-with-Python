@@ -8,8 +8,8 @@ import sys
 import os
 # Add project root to sys.path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
 from db.db_connection import SwiggyDBConnection
+
 
 class SwiggyApp(ctk.CTk):
     def __init__(self):
@@ -43,8 +43,7 @@ class SwiggyApp(ctk.CTk):
     def clear_frame(self, frame):
         for widget in frame.winfo_children():
             widget.destroy()
-
-        
+ 
     def show_splash_screen(self):
         self.splash = ctk.CTkToplevel(self)
         self.splash.overrideredirect(True)
@@ -65,10 +64,22 @@ class SwiggyApp(ctk.CTk):
             logo_label.pack(pady=(10, 15))
         except Exception as e:
             print(f"Logo load error: {e}")
-            ctk.CTkLabel(frame, text="[Swiggy Logo]", font=("Segoe UI", 28, "bold"), text_color="#FF5722").pack(pady=(10, 15))
+            ctk.CTkLabel(
+                frame, 
+                text="[Swiggy Logo]", 
+                font=("Segoe UI", 28, "bold"), 
+                text_color="#FF5722").pack(pady=(10, 15))
 
-        ctk.CTkLabel(frame, text="Swiggy Data Analysis", font=("Segoe UI", 32, "bold"), text_color="#004225").pack(pady=(10, 5))
-        ctk.CTkLabel(frame, text="Presented by Team 7", font=("Segoe UI", 18), text_color="#1A1A1A").pack(pady=(5, 10))
+        ctk.CTkLabel(
+            frame, 
+            text="Swiggy Data Analysis", 
+            font=("Segoe UI", 32, "bold"), 
+            text_color="#004225").pack(pady=(10, 5))
+        ctk.CTkLabel(
+            frame, 
+            text="Presented by Team 7", 
+            font=("Segoe UI", 18), 
+            text_color="#1A1A1A").pack(pady=(5, 10))
 
         self.splash.after(3000, lambda: [self.splash.destroy(), self.create_login_screen()])
         
@@ -91,6 +102,7 @@ class SwiggyApp(ctk.CTk):
             logo_label.image = logo
             logo_label.pack(pady=(20, 10))
         except:
+            
             ctk.CTkLabel(self.login_frame, text="Swiggy", font=("Segoe UI", 28, "bold"), text_color="#FF5722").pack(pady=(20, 10))
 
         ctk.CTkLabel(self.login_frame, text="Login to Swiggy DB", font=("Segoe UI", 24, "bold"), text_color="#333").pack(pady=(5, 20))

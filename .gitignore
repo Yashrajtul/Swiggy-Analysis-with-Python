@@ -1,3 +1,4 @@
 credentials
 .env
 tests
+**/__pycache__/
