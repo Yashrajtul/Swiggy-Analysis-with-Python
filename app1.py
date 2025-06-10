@@ -611,7 +611,7 @@ class SwiggyApp(ctk.CTk):
         self.query_executed_successfully = False
 
         # Load query history
-        self.query_history_file = "query_history.json"
+        self.query_history_file = os.path.join("queries", "query_history.json")
         if not os.path.exists(self.query_history_file):
             with open(self.query_history_file, "w") as f:
                 json.dump([], f)
@@ -752,7 +752,8 @@ class SwiggyApp(ctk.CTk):
                 history = []
     
             history.append({"title": title, "query": query})
-    
+
+            os.makedirs("queries", exist_ok=True)
             with open(self.query_history_file, "w") as f:
                 json.dump(history, f, indent=4)
 
@@ -779,17 +780,32 @@ class SwiggyApp(ctk.CTk):
             
         for index, item in enumerate(history):
             row = ctk.CTkFrame(self.query_history_container, fg_color="#333")
-            row.pack(fill="x", pady=2)
+            row.pack(fill="both", pady=2)
             
             def run_saved_query(query=item["query"]):
                 self.query_textbox.delete("1.0", tk.END)
                 self.query_textbox.insert("1.0", query)
                 self.submit_custom_query()  # Run immediately
 
-            ctk.CTkLabel(row, text=item['title'], font=("Helvetica", 12), text_color="white", anchor="w", width=200).pack(side="left", padx=5)
-            ctk.CTkButton(row, text="▶", width=30, command=lambda q=item['query']: run_saved_query(q)).pack(side="left")
-            ctk.CTkButton(row, text="✏", width=30, command=lambda i=index: self.edit_query(i)).pack(side="left")
-            ctk.CTkButton(row, text="🗑", width=30, command=lambda i=index: self.delete_query(i)).pack(side="left")
+            # Container for left-aligned label and right-aligned buttons
+            content_frame = ctk.CTkFrame(row, fg_color="transparent")
+            content_frame.pack(fill="x")
+
+            # Left-aligned title with truncation
+            title = item['title']
+            truncated_title = (title[:60] + "...") if len(title) > 65 else title
+            label = ctk.CTkLabel(content_frame, text=truncated_title, font=("Helvetica", 12), text_color="white", anchor="w")
+            label.pack(side="left", fill="x", expand=True)
+            label.bind("<Button-1>", lambda e, q=item["query"]: run_saved_query(q))
+            label.configure(cursor="hand2")
+
+            # Right-aligned buttons
+            button_frame = ctk.CTkFrame(content_frame, fg_color="transparent")
+            button_frame.pack(side="right")
+
+            ctk.CTkButton(button_frame, text="▶", width=30, command=lambda q=item['query']: run_saved_query(q)).pack(side="left", padx=2)
+            ctk.CTkButton(button_frame, text="✏", width=30, command=lambda i=index: self.edit_query(i)).pack(side="left", padx=2)
+            ctk.CTkButton(button_frame, text="🗑", width=30, command=lambda i=index: self.delete_query(i)).pack(side="left", padx=2)
     
     def edit_query(self, index):
         with open(self.query_history_file, "r+") as f:

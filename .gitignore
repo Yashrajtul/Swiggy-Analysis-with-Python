@@ -3,3 +3,4 @@ credentials
 tests
 **/__pycache__/
 query_history.json
+queries
