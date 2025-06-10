@@ -2,3 +2,4 @@ credentials
 .env
 tests
 **/__pycache__/
+query_history.json

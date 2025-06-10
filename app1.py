@@ -1,8 +1,12 @@
 import customtkinter as ctk
-from tkinter import messagebox
-from db.db_connection import SwiggyDBConnection  # Ensure this import matches your actual file structure
+import tkinter as tk
+from tkinter import messagebox, filedialog, simpledialog
 from PIL import Image
 import platform
+import csv, os, json
+from pathlib import Path
+from db.db_connection import SwiggyDBConnection
+from datetime import datetime
 
 
 class SwiggyApp(ctk.CTk):
@@ -37,10 +41,8 @@ class SwiggyApp(ctk.CTk):
     def clear_frame(self, frame):
         for widget in frame.winfo_children():
             widget.destroy()
-
-        
+ 
     def show_splash_screen(self):
-        self.protocol("WM_DELETE_WINDOW", self.confirm_exit)
         self.splash = ctk.CTkToplevel(self)
         self.splash.overrideredirect(True)
 
@@ -60,19 +62,31 @@ class SwiggyApp(ctk.CTk):
             logo_label.pack(pady=(10, 15))
         except Exception as e:
             print(f"Logo load error: {e}")
-            ctk.CTkLabel(frame, text="[Swiggy Logo]", font=("Segoe UI", 28, "bold"), text_color="#FF5722").pack(pady=(10, 15))
+            ctk.CTkLabel(
+                frame, 
+                text="[Swiggy Logo]", 
+                font=("Segoe UI", 28, "bold"), 
+                text_color="#FF5722").pack(pady=(10, 15))
 
-        ctk.CTkLabel(frame, text="Swiggy Data Analysis", font=("Segoe UI", 32, "bold"), text_color="#004225").pack(pady=(10, 5))
-        ctk.CTkLabel(frame, text="Presented by Team 7", font=("Segoe UI", 18), text_color="#1A1A1A").pack(pady=(5, 10))
+        ctk.CTkLabel(
+            frame, 
+            text="Swiggy Data Analysis", 
+            font=("Segoe UI", 32, "bold"), 
+            text_color="#004225").pack(pady=(10, 5))
+        ctk.CTkLabel(
+            frame, 
+            text="Presented by Team 7", 
+            font=("Segoe UI", 18), 
+            text_color="#1A1A1A").pack(pady=(5, 10))
 
         self.splash.after(3000, lambda: [self.splash.destroy(), self.create_login_screen()])
         
     def create_login_screen(self):
         self.deiconify()
+        self.protocol("WM_DELETE_WINDOW", self.confirm_exit)
         self.title("Login - Swiggy Data Analysis")
-        self._center_window(self, 600, 640)
+        self._center_window(self, 600, 680)
         self.resizable(False, False)
-        self.bind("<Escape>", self.confirm_exit)
 
         for widget in self.winfo_children():
             widget.destroy()
@@ -86,6 +100,7 @@ class SwiggyApp(ctk.CTk):
             logo_label.image = logo
             logo_label.pack(pady=(20, 10))
         except:
+            
             ctk.CTkLabel(self.login_frame, text="Swiggy", font=("Segoe UI", 28, "bold"), text_color="#FF5722").pack(pady=(20, 10))
 
         ctk.CTkLabel(self.login_frame, text="Login to Swiggy DB", font=("Segoe UI", 24, "bold"), text_color="#333").pack(pady=(5, 20))
@@ -96,13 +111,18 @@ class SwiggyApp(ctk.CTk):
         self.db_var = ctk.StringVar()
         self.entry_list = []
 
-        self._labeled_entry(self.login_frame, "Host", self.host_var)
-        self._labeled_entry(self.login_frame, "Username", self.user_var)
+        self.saved_credentials = self._load_saved_credentials()
+
+        self._labeled_entry(self.login_frame, "Host", self.host_var, options=self.saved_credentials.get("host"))
+        self._labeled_entry(self.login_frame, "Username", self.user_var, options=self.saved_credentials.get("user"))
         self._labeled_entry(self.login_frame, "Password", self.pass_var, show="*")
-        self._labeled_entry(self.login_frame, "Database", self.db_var)
+        self._labeled_entry(self.login_frame, "Database", self.db_var, options=self.saved_credentials.get("database"))
+
+        self.remember_var = ctk.BooleanVar()
+        ctk.CTkCheckBox(self.login_frame, text="Remember Host/User/Database", variable=self.remember_var, text_color='#555').pack(pady=(10, 5))
 
         self.login_btn = ctk.CTkButton(self.login_frame, text="Connect", command=self.submit_credentials, font=("Segoe UI", 16, "bold"), corner_radius=10, fg_color="#FF7F50", hover_color="#FF5722")
-        self.login_btn.pack(pady=(25, 30), ipadx=10, ipady=6)
+        self.login_btn.pack(pady=(20, 30), ipadx=10, ipady=6)
 
         for i, entry in enumerate(self.entry_list):
             entry.bind("<Return>", lambda e, idx=i: self.entry_list[idx + 1].focus() if idx + 1 < len(self.entry_list) else [self.login_btn.focus(), self.submit_credentials()])
@@ -111,18 +131,50 @@ class SwiggyApp(ctk.CTk):
 
         if self.entry_list:
             self.entry_list[0].focus()
+            
+        self.bind("<Escape>", self.confirm_exit)
 
-    def _labeled_entry(self, parent, label_text, variable, show=None):
+    def _labeled_entry(self, parent, label_text, variable, show=None, options=None):
         container = ctk.CTkFrame(parent, fg_color="transparent")
         container.pack(pady=5, fill="x", padx=40)
         ctk.CTkLabel(container, text=label_text, anchor="w", font=("Segoe UI", 12), text_color="#555").pack(anchor="w")
-        entry = ctk.CTkEntry(container, textvariable=variable, show=show, font=("Segoe UI", 12))
-        entry.pack(fill="x")
-        self.entry_list.append(entry)
+
+        if options:
+            combo = ctk.CTkComboBox(container, variable=variable, values=options, font=("Segoe UI", 12))
+            combo.pack(fill="x")
+            self.entry_list.append(combo)
+        else:
+            entry = ctk.CTkEntry(container, textvariable=variable, show=show, font=("Segoe UI", 12))
+            entry.pack(fill="x")
+            self.entry_list.append(entry)
+
+    def _load_saved_credentials(self):
+        try:
+            if os.path.exists(os.path.join("app/credentials","credentials.json")):
+                with open(os.path.join("app/credentials","credentials.json"), "r") as f:
+                    return json.load(f)
+        except:
+            pass
+        return {"host": [], "user": [], "database": []}
+
+    def _save_credentials(self, host, user, database):
+        creds = self._load_saved_credentials()
+        for key, val in zip(["host", "user", "database"], [host, user, database]):
+            if val and val not in creds[key]:
+                creds[key].insert(0, val)
+                creds[key] = creds[key][:5]  # keep only last 5 entries
+        
+        os.makedirs("app/credentials", exist_ok=True)
+        with open(os.path.join("app/credentials","credentials.json"), "w") as f:
+            json.dump(creds, f)
 
     def confirm_exit(self, event=None):
-        if messagebox.askyesno("Exit", "Are you sure you want to exit?"):
-            self.destroy()
+        try:
+            if self.winfo_exists():
+                if messagebox.askyesno("Exit", "Are you sure you want to exit?"):
+                    self.destroy()
+        except tk.TclError:
+            pass  # Window already destroyed, ignore
 
     def submit_credentials(self):
         host = self.host_var.get().strip()
@@ -143,6 +195,8 @@ class SwiggyApp(ctk.CTk):
         try:
             self.db_connection = SwiggyDBConnection(host, user, password, database)
             loading_popup.destroy()
+            if self.remember_var.get():
+                self._save_credentials(host, user, database)
             messagebox.showinfo("Success", "Connected successfully!")
             self.create_main_screen()
         except Exception as e:
@@ -158,7 +212,6 @@ class SwiggyApp(ctk.CTk):
         except Exception as e:
             popup.destroy()
             messagebox.showerror("Connection Failed", str(e))
-
 
     def create_main_screen(self):
         self.title("Swiggy Dashboard")
@@ -246,6 +299,7 @@ class SwiggyApp(ctk.CTk):
 
     def show_schema_page(self):
         self.clear_window()
+        self.protocol("WM_DELETE_WINDOW", self.show_escape_to_main) 
         self.title("Show Schema - Swiggy Data Analysis")
         self._center_window(self, 1000, 700)
 
@@ -334,111 +388,507 @@ class SwiggyApp(ctk.CTk):
     
     def fetch_data_page(self):
         self.clear_frame(self.main_frame)
+        self.protocol("WM_DELETE_WINDOW", self.show_escape_to_main) 
+        self._center_window(self, 750, 900)
+        
+        def escape_popup(event=None):
+            if messagebox.askyesno("Go Back", "Do you want to return to the main menu?"):
+                self.create_main_screen()
 
-        title = ctk.CTkLabel(self.main_frame, text="Fetch Table Data", font=("Helvetica", 22, "bold"))
-        title.pack(pady=10)
+        self.bind("<Escape>", escape_popup)
 
-        # Form Frame
-        form_frame = ctk.CTkFrame(self.main_frame)
-        form_frame.pack(pady=10, padx=20, fill="x")
+        # Title
+        title_label = ctk.CTkLabel(self.main_frame, text="📊 Fetch Table Data", font=("Helvetica", 22, "bold"), text_color="#FFA500")
+        title_label.pack(pady=15)
 
-        # Table selection dropdown
-        ctk.CTkLabel(form_frame, text="Table Name:").grid(row=0, column=0, sticky="e", pady=5, padx=5)
+        # Input section frame
+        input_frame = ctk.CTkFrame(self.main_frame, fg_color="#1c1c1c", corner_radius=15)
+        input_frame.pack(pady=10, padx=20, fill="x")
+
+        # Table Dropdown
+        ctk.CTkLabel(input_frame, text="Table:", font=("Helvetica", 14), text_color="white").grid(row=0, column=0, padx=10, pady=5, sticky="e")
         self.table_var = ctk.StringVar()
         table_names = self.db_connection.fetch_table_names()
-        table_menu = ctk.CTkOptionMenu(form_frame, variable=self.table_var, values=table_names)
-        table_menu.grid(row=0, column=1, sticky="w", pady=5, padx=5)
+        ctk.CTkComboBox(input_frame, variable=self.table_var, values=table_names, font=("Helvetica", 13), width=200).grid(row=0, column=1, padx=10, pady=5)
 
-        # Input field generator
-        def create_input(label, var, row):
-            ctk.CTkLabel(form_frame, text=f"{label}:").grid(row=row, column=0, sticky="e", pady=5, padx=5)
-            entry = ctk.CTkEntry(form_frame, textvariable=var, width=300)
-            entry.grid(row=row, column=1, sticky="w", pady=5, padx=5)
-
+        # Columns
+        ctk.CTkLabel(input_frame, text="Columns (comma separated):", font=("Helvetica", 14), text_color="white").grid(row=1, column=0, padx=10, pady=5, sticky="e")
         self.columns_var = ctk.StringVar()
+        ctk.CTkEntry(input_frame, textvariable=self.columns_var, width=300).grid(row=1, column=1, padx=10, pady=5)
+
+        # Where
+        ctk.CTkLabel(input_frame, text="WHERE clause:", font=("Helvetica", 14), text_color="white").grid(row=2, column=0, padx=10, pady=5, sticky="e")
         self.where_var = ctk.StringVar()
+        ctk.CTkEntry(input_frame, textvariable=self.where_var, width=300).grid(row=2, column=1, padx=10, pady=5)
+
+        # GROUP BY
+        ctk.CTkLabel(input_frame, text="GROUP BY:", font=("Helvetica", 14), text_color="white").grid(row=3, column=0, padx=10, pady=5, sticky="e")
         self.group_by_var = ctk.StringVar()
+        ctk.CTkEntry(input_frame, textvariable=self.group_by_var, width=300).grid(row=3, column=1, padx=10, pady=5)
+
+        # HAVING
+        ctk.CTkLabel(input_frame, text="HAVING:", font=("Helvetica", 14), text_color="white").grid(row=4, column=0, padx=10, pady=5, sticky="e")
         self.having_var = ctk.StringVar()
+        ctk.CTkEntry(input_frame, textvariable=self.having_var, width=300).grid(row=4, column=1, padx=10, pady=5)
+
+        # ORDER BY
+        ctk.CTkLabel(input_frame, text="ORDER BY:", font=("Helvetica", 14), text_color="white").grid(row=5, column=0, padx=10, pady=5, sticky="e")
         self.order_by_var = ctk.StringVar()
+        ctk.CTkEntry(input_frame, textvariable=self.order_by_var, width=300).grid(row=5, column=1, padx=10, pady=5)
+
+        # LIMIT
+        ctk.CTkLabel(input_frame, text="LIMIT:", font=("Helvetica", 14), text_color="white").grid(row=6, column=0, padx=10, pady=5, sticky="e")
         self.limit_var = ctk.StringVar()
+        ctk.CTkEntry(input_frame, textvariable=self.limit_var, width=300).grid(row=6, column=1, padx=10, pady=5)
+
+        # OFFSET
+        ctk.CTkLabel(input_frame, text="OFFSET:", font=("Helvetica", 14), text_color="white").grid(row=7, column=0, padx=10, pady=5, sticky="e")
         self.offset_var = ctk.StringVar()
-
-        create_input("Columns (comma-separated)", self.columns_var, 1)
-        create_input("WHERE Clause", self.where_var, 2)
-        create_input("GROUP BY", self.group_by_var, 3)
-        create_input("HAVING", self.having_var, 4)
-        create_input("ORDER BY", self.order_by_var, 5)
-        create_input("LIMIT (number)", self.limit_var, 6)
-        create_input("OFFSET (number)", self.offset_var, 7)
-
-        # Output Frame (created once)
-        self.output_frame = ctk.CTkScrollableFrame(self.main_frame, height=300)
-        self.output_frame.pack(pady=10, padx=10, fill="both", expand=True)
+        ctk.CTkEntry(input_frame, textvariable=self.offset_var, width=300).grid(row=7, column=1, padx=10, pady=5)
 
         # Submit Button
-        def submit_query():
-            # Clear old content in output_frame
-            for widget in self.output_frame.winfo_children():
-                widget.destroy()
+        submit_button = ctk.CTkButton(
+            input_frame,
+            text="Run Query",
+            command=self.submit_query,
+            fg_color="#FFA500",
+            hover_color="#cc8400",
+            font=("Helvetica", 15, "bold"),
+            width=200
+        )
+        submit_button.grid(row=8, column=0, columnspan=2, pady=15)
 
-            table_name = self.table_var.get().strip()
-            columns_input = self.columns_var.get().strip()
-            columns = tuple(col.strip() for col in columns_input.split(",")) if columns_input else None
+        # # Output frame for table data
+        # self.output_frame = ctk.CTkScrollableFrame(self.main_frame, height=350, fg_color="#252525", corner_radius=15)
+        # self.output_frame.pack(pady=10, padx=20, fill="both", expand=True)
 
-            where = self.where_var.get().strip() or None
-            group_by = self.group_by_var.get().strip() or None
-            having = self.having_var.get().strip() or None
-            order_by = self.order_by_var.get().strip() or None
+        # Output frame with both horizontal and vertical scrollbars
+        output_container = ctk.CTkFrame(self.main_frame, fg_color="#252525", corner_radius=15)
+        output_container.pack(pady=10, padx=20, fill="both", expand=True)
 
-            try:
-                limit = int(self.limit_var.get().strip()) if self.limit_var.get().strip() else None
-            except ValueError:
-                messagebox.showerror("Input Error", "LIMIT must be a valid integer.")
-                return
+        canvas = tk.Canvas(output_container, bg="#252525", highlightthickness=0)
+        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
-            try:
-                offset = int(self.offset_var.get().strip()) if self.offset_var.get().strip() else None
-            except ValueError:
-                messagebox.showerror("Input Error", "OFFSET must be a valid integer.")
-                return
+        v_scrollbar = tk.Scrollbar(output_container, orient=tk.VERTICAL, command=canvas.yview)
+        v_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
-            try:
-                rows = self.db_connection.fetch_table_data(
-                    table_name=table_name,
-                    columns=columns,
-                    where_clause=where,
-                    group_by=group_by,
-                    having=having,
-                    order_by=order_by,
-                    limit=limit,
-                    offset=offset
-                )
+        h_scrollbar = tk.Scrollbar(self.main_frame, orient=tk.HORIZONTAL, command=canvas.xview)
+        h_scrollbar.pack(fill=tk.X, padx=20)
 
-                if columns:  # Show only selected column headers
-                    columns_list = list(columns)
-                else:  # Show all columns
-                    columns_list = self.db_connection.fetch_table_columns(table_name)
+        canvas.configure(yscrollcommand=v_scrollbar.set, xscrollcommand=h_scrollbar.set)
 
-                # Column Headers
-                for j, col_name in enumerate(columns_list):
-                    header = ctk.CTkLabel(self.output_frame, text=col_name, font=("Helvetica", 13, "bold"))
-                    header.grid(row=0, column=j, padx=10, pady=5)
+        # Scrollable inner frame
+        self.output_frame = tk.Frame(canvas, bg="#252525")
+        self.output_frame.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
 
-                # Data Rows
-                for i, row in enumerate(rows, start=1):
-                    for j, value in enumerate(row):
-                        label = ctk.CTkLabel(self.output_frame, text=str(value), wraplength=250)
-                        label.grid(row=i, column=j, padx=10, pady=3)
+        canvas.create_window((0, 0), window=self.output_frame, anchor="nw")
 
-            except Exception as e:
-                messagebox.showerror("Fetch Error", str(e))
+        # Bindings for scrolling:
 
-        submit_button = ctk.CTkButton(form_frame, text="Run Query", command=submit_query)
-        submit_button.grid(row=8, column=0, columnspan=2, pady=10)        
+        # Vertical scroll (mouse wheel)
+        def _on_mousewheel(event):
+            canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
 
+        # Horizontal scroll (Shift + mouse wheel)
+        def _on_shift_mousewheel(event):
+            canvas.xview_scroll(int(-1 * (event.delta / 120)), "units")
+
+        # Linux vertical scroll (Button 4 and 5)
+        def _on_linux_scroll(event):
+            if event.num == 4:
+                canvas.yview_scroll(-1, "units")
+            elif event.num == 5:
+                canvas.yview_scroll(1, "units")
+
+        # Linux horizontal scroll (Button 6 and 7)
+        # def _on_linux_horiz_scroll(event):
+        #     if event.num == 6:
+        #         canvas.xview_scroll(-1, "units")
+        #     elif event.num == 7:
+        #         canvas.xview_scroll(1, "units")
+
+        # Bind scroll events globally to canvas
+        canvas.bind_all("<MouseWheel>", _on_mousewheel)
+        canvas.bind_all("<Shift-MouseWheel>", _on_shift_mousewheel)
+        canvas.bind_all("<Button-4>", _on_linux_scroll)   # scroll up
+        canvas.bind_all("<Button-5>", _on_linux_scroll)   # scroll down
+        # canvas.bind_all("<Button-6>", _on_linux_horiz_scroll)  # horizontal scroll left
+        # canvas.bind_all("<Button-7>", _on_linux_horiz_scroll)  # horizontal scroll right
+
+
+        
+    # Submit Button
+    def submit_query(self):
+        # Clear old content in output_frame
+        for widget in self.output_frame.winfo_children():
+            widget.destroy()
+
+        table_name = self.table_var.get().strip()
+        columns_input = self.columns_var.get().strip()
+        columns = tuple(col.strip() for col in columns_input.split(",")) if columns_input else None
+
+        where = self.where_var.get().strip() or None
+        group_by = self.group_by_var.get().strip() or None
+        having = self.having_var.get().strip() or None
+        order_by = self.order_by_var.get().strip() or None
+
+        try:
+            limit = int(self.limit_var.get().strip()) if self.limit_var.get().strip() else None
+        except ValueError:
+            messagebox.showerror("Input Error", "LIMIT must be a valid integer.")
+            return
+
+        try:
+            offset = int(self.offset_var.get().strip()) if self.offset_var.get().strip() else None
+        except ValueError:
+            messagebox.showerror("Input Error", "OFFSET must be a valid integer.")
+            return
+
+        try:
+            rows = self.db_connection.fetch_table_data(
+                table_name=table_name,
+                columns=columns,
+                where_clause=where,
+                group_by=group_by,
+                having=having,
+                order_by=order_by,
+                limit=limit,
+                offset=offset
+            )
+
+            if columns:  # Show only selected column headers
+                columns_list = list(columns)
+            else:  # Show all columns
+                columns_list = self.db_connection.fetch_table_columns(table_name)
+
+            # Column Headers
+            for j, col_name in enumerate(columns_list):
+                header = ctk.CTkLabel(self.output_frame, text=col_name, font=("Helvetica", 13, "bold"))
+                header.grid(row=0, column=j, padx=10, pady=5)
+
+            # Data Rows
+            for i, row in enumerate(rows, start=1):
+                for j, value in enumerate(row):
+                    label = ctk.CTkLabel(self.output_frame, text=str(value), wraplength=250)
+                    label.grid(row=i, column=j, padx=10, pady=3)
+
+        except Exception as e:
+            messagebox.showerror("Fetch Error", str(e))
 
     def run_query_page(self):
-        self.navigate_to("SQL Query Page")
+        self.clear_frame(self.main_frame)
+        self.protocol("WM_DELETE_WINDOW", self.show_escape_to_main) 
+        self._center_window(self, 700, 900)
+
+        def escape_popup(event=None):
+            if messagebox.askyesno("Go Back", "Do you want to return to the main menu?"):
+                self.create_main_screen()
+
+        self.bind("<Escape>", escape_popup)
+
+        self.latest_query_results = []
+        self.latest_query_columns = []
+        self.query_executed_successfully = False
+
+        # Load query history
+        self.query_history_file = "query_history.json"
+        if not os.path.exists(self.query_history_file):
+            with open(self.query_history_file, "w") as f:
+                json.dump([], f)
+
+        # Title
+        title_label = ctk.CTkLabel(self.main_frame, text="🧠 Run Custom SQL Query", font=("Helvetica", 22, "bold"), text_color="#FFA500")
+        title_label.pack(pady=15)
+
+        # Frame for input area
+        input_frame = ctk.CTkFrame(self.main_frame, fg_color="#1c1c1c", corner_radius=15)
+        input_frame.pack(padx=20, pady=10, fill="x")
+
+        # SQL query input
+        ctk.CTkLabel(input_frame, text="Enter MySQL Query:", font=("Helvetica", 14), text_color="white").pack(anchor="w", padx=10, pady=5)
+        self.query_textbox = ctk.CTkTextbox(input_frame, height=120, font=("Courier", 13), fg_color="#252525", text_color="white", border_color="#FFA500", border_width=2)
+        self.query_textbox.pack(padx=10, pady=5, fill="x")
+        # self.query_textbox.insert("1.0", "-- Example: SELECT * FROM your_table;")
+        
+        # Save Query Button
+        ctk.CTkButton(
+            input_frame,
+            text="📂 Save Query",
+            command=self.save_query,
+            fg_color="#28a745",
+            hover_color="#1e7e34",
+            font=("Helvetica", 14, "bold")
+        ).pack(pady=5)
+
+        # Run button
+        ctk.CTkButton(
+            input_frame,
+            text="▶ Run Query",
+            command=self.submit_custom_query,
+            fg_color="#FFA500",
+            hover_color="#cc8400",
+            font=("Helvetica", 15, "bold"),
+            width=200
+        ).pack(pady=10)
+
+        # Collapsible Query History
+        sidebar_frame = ctk.CTkFrame(self.main_frame, fg_color="#1c1c1c")
+        sidebar_frame.pack(fill="x", padx=20, pady=10)
+
+        self.history_visible = tk.BooleanVar(value=False)
+
+        def toggle_history():
+            if self.history_visible.get():
+                self.query_history_container.pack_forget()
+                toggle_btn.configure(text="▶ Show Query History")
+            else:
+                self.query_history_container.pack(fill="x", padx=10, pady=5)
+                toggle_btn.configure(text="▼ Hide Query History")
+            self.history_visible.set(not self.history_visible.get())
+
+
+        toggle_btn = ctk.CTkButton(sidebar_frame, text="▶ Show Query History", command=toggle_history, font=("Helvetica", 14), width=200)
+        toggle_btn.pack(anchor="w", padx=10, pady=5)
+
+        self.query_history_container = ctk.CTkScrollableFrame(sidebar_frame, fg_color="#252525", height=250)
+        self.load_query_history()
+
+        # Output Frame Setup
+        output_container = ctk.CTkFrame(self.main_frame, fg_color="#252525", corner_radius=15)
+        output_container.pack(pady=10, padx=20, fill="both", expand=True)
+
+        canvas = tk.Canvas(output_container, bg="#252525", highlightthickness=0)
+        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        v_scrollbar = tk.Scrollbar(output_container, orient=tk.VERTICAL, command=canvas.yview)
+        v_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+        h_scrollbar = tk.Scrollbar(output_container, orient=tk.HORIZONTAL, command=canvas.xview)
+        h_scrollbar.pack(side=tk.BOTTOM, fill=tk.X)
+
+        canvas.configure(yscrollcommand=v_scrollbar.set, xscrollcommand=h_scrollbar.set)
+
+        self.output_frame = tk.Frame(canvas, bg="#252525")
+        self.output_frame.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
+        canvas.create_window((0, 0), window=self.output_frame, anchor="nw")
+
+        def _on_mousewheel(event): canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+        def _on_shift_mousewheel(event): canvas.xview_scroll(int(-1*(event.delta/120)), "units")
+        def _on_linux_scroll(event):
+            if event.num == 4: canvas.yview_scroll(-1, "units")
+            elif event.num == 5: canvas.yview_scroll(1, "units")
+
+        canvas.bind("<Enter>", lambda e: (
+            canvas.bind("<MouseWheel>", _on_mousewheel),
+            canvas.bind("<Shift-MouseWheel>", _on_shift_mousewheel),
+            canvas.bind("<Button-4>", _on_linux_scroll),
+            canvas.bind("<Button-5>", _on_linux_scroll)
+        ))
+        canvas.bind("<Leave>", lambda e: (
+            canvas.unbind("<MouseWheel>"),
+            canvas.unbind("<Shift-MouseWheel>"),
+            canvas.unbind("<Button-4>"),
+            canvas.unbind("<Button-5>")
+        ))
+
+        self.export_button = ctk.CTkButton(
+            self.main_frame,
+            text="Export to CSV",
+            command=self.export_query_result_to_csv,
+            fg_color="#1c8adb",
+            hover_color="#146baf",
+            font=("Helvetica", 14, "bold"),
+            width=180
+        )
+        self.export_button.pack(pady=10)
+        self.export_button.pack_forget()
+
+    def save_query(self):
+        query = self.query_textbox.get("1.0", "end").strip()
+        if not query:
+            messagebox.showwarning("Input Error", "Query is empty. Please enter a valid SQL query.")
+            return
+    
+        try:
+            results = self.db_connection.fetch_query_result(query)
+            if not results:
+                messagebox.showwarning("No Results", "Query executed but returned no results. Cannot save.")
+                return
+            # Ask for title
+            title = simpledialog.askstring("Save Query", "Enter a title for this query:")
+            if not title:
+                messagebox.showwarning("Missing Info", "Both title and query are required.")
+                return
+    
+            # Load existing history
+            try:
+                with open(self.query_history_file, "r") as f:
+                    try:
+                        history = json.load(f)
+                    except json.JSONDecodeError:
+                        print("No history")
+                        history = []
+            except FileNotFoundError:
+                history = []
+    
+            history.append({"title": title, "query": query})
+    
+            with open(self.query_history_file, "w") as f:
+                json.dump(history, f, indent=4)
+
+            self.load_query_history()
+            messagebox.showinfo("Saved", f"Query '{title}' saved successfully.")
+    
+        except Exception as e:
+            messagebox.showerror("Execution Failed", f"Query could not be executed.\nError: {e}")
+
+    
+    def load_query_history(self):
+        for widget in self.query_history_container.winfo_children():
+            widget.destroy()
+        # with open(self.query_history_file) as f:
+        #     history = json.load(f)
+        try:
+            with open(self.query_history_file) as f:
+                try:
+                    history = json.load(f)
+                except json.JSONDecodeError:
+                    history = []  # Empty or invalid file
+        except FileNotFoundError:
+            history = []
+            
+        for index, item in enumerate(history):
+            row = ctk.CTkFrame(self.query_history_container, fg_color="#333")
+            row.pack(fill="x", pady=2)
+            ctk.CTkLabel(row, text=item['title'], font=("Helvetica", 12), text_color="white", anchor="w", width=200).pack(side="left", padx=5)
+            ctk.CTkButton(row, text="▶", width=30, command=lambda q=item['query']: self.query_textbox.delete("1.0", "end") or self.query_textbox.insert("1.0", q)).pack(side="left")
+            ctk.CTkButton(row, text="✏", width=30, command=lambda i=index: self.edit_query(i)).pack(side="left")
+            ctk.CTkButton(row, text="🗑", width=30, command=lambda i=index: self.delete_query(i)).pack(side="left")
+
+    def edit_query(self, index):
+        with open(self.query_history_file, "r+") as f:
+            try:
+                history = json.load(f)
+            except json.JSONDecodeError:
+                messagebox.showerror("Error", "Could not read query history.")
+                return
+    
+            if index >= len(history):
+                messagebox.showerror("Error", "Query not found.")
+                return
+    
+            old_title = history[index]["title"]
+            old_query = history[index]["query"]
+    
+            new_title = simpledialog.askstring("Edit Query Title", "Update the title:", initialvalue=old_title)
+            if new_title is None:
+                return
+    
+            new_query = simpledialog.askstring("Edit SQL Query", "Update the SQL query:", initialvalue=old_query)
+            if new_query is None:
+                return
+    
+            try:
+                results = self.db_connection.fetch_query_result(new_query)
+            except Exception as e:
+                messagebox.showerror("Query Failed", f"Failed to execute updated query:\n\n{e}")
+                return
+    
+            if not results:
+                messagebox.showinfo("No Results", "The updated query returned no results and will not be saved.")
+                return
+    
+            # If query is valid and returns data, update and save
+            history[index]["title"] = new_title
+            history[index]["query"] = new_query
+    
+            f.seek(0)
+            f.truncate()
+            json.dump(history, f, indent=2)
+    
+        self.load_query_history()
+        messagebox.showinfo("Query Updated", "Query updated and validated successfully.")
+
+
+    def delete_query(self, index):
+        if messagebox.askyesno("Delete Query", "Are you sure you want to delete this saved query?"):
+            with open(self.query_history_file, "r+") as f:
+                try:
+                    history = json.load(f)
+                except json.JSONDecodeError:
+                    history = []
+
+                if index < len(history):
+                    del history[index]
+
+                f.seek(0)
+                f.truncate()
+                json.dump(history, f, indent=2)
+
+            self.load_query_history()
+            
+    def submit_custom_query(self):
+        for widget in self.output_frame.winfo_children():
+            widget.destroy()
+        self.export_button.pack_forget()
+        self.query_executed_successfully = False
+
+        query = self.query_textbox.get("1.0", "end").strip()
+        if not query:
+            messagebox.showwarning("Input Error", "Please enter a SQL query.")
+            return
+
+        try:
+            results = self.db_connection.fetch_query_result(query)
+            cursor_description = self.db_connection.cursor.description
+
+            if not results:
+                messagebox.showinfo("Query Result", "No data returned.")
+                return
+
+            columns = [desc[0] for desc in cursor_description] if cursor_description else [f"Column {i+1}" for i in range(len(results[0]))]
+
+            self.latest_query_results = results
+            self.latest_query_columns = columns
+            self.query_executed_successfully = True
+
+            for j, col_name in enumerate(columns):
+                header = ctk.CTkLabel(self.output_frame, text=col_name, font=("Helvetica", 13, "bold"), text_color="#FFA500", bg_color="#252525")
+                header.grid(row=0, column=j, padx=10, pady=5)
+
+            for i, row in enumerate(results, start=1):
+                for j, value in enumerate(row):
+                    label = ctk.CTkLabel(self.output_frame, text=str(value), wraplength=250, font=("Helvetica", 12), text_color="white", bg_color="#252525")
+                    label.grid(row=i, column=j, padx=10, pady=3)
+
+            self.export_button.pack(pady=10)
+
+        except Exception as e:
+            messagebox.showerror("Query Execution Error", str(e))
+
+    def export_query_result_to_csv(self):
+        if not self.latest_query_results or not self.latest_query_columns:
+            messagebox.showwarning("Export Error", "No results to export.")
+            return
+
+        downloads_path = str(Path.home() / "Downloads")
+        file_path = filedialog.asksaveasfilename(
+            initialdir=downloads_path,
+            defaultextension=".csv",
+            filetypes=[("CSV Files", "*.csv")],
+            title="Save query result as..."
+        )
+
+        if file_path:
+            try:
+                with open(file_path, "w", newline='', encoding="utf-8") as f:
+                    writer = csv.writer(f)
+                    writer.writerow(self.latest_query_columns)
+                    writer.writerows(self.latest_query_results)
+                messagebox.showinfo("Export Successful", f"Results exported to {file_path}")
+            except Exception as e:
+                messagebox.showerror("Export Failed", str(e))
+
 
     def show_escape_options(self, event=None):
         response = messagebox.askyesnocancel("Escape Options", "Choose an action:\n\nYes: Disconnect and Login\nNo: Exit Application\nCancel: Stay on Main Screen", icon='question')
@@ -448,6 +898,19 @@ class SwiggyApp(ctk.CTk):
             if self.db_connection:
                 self.db_connection.disconnect()
             self.create_login_screen()
+        else:  # No pressed, exit application
+            if self.db_connection:
+                self.db_connection.disconnect()
+            self.destroy()
+    
+    def show_escape_to_main(self, event=None):
+        response = messagebox.askyesnocancel("Escape Options", "Choose an action:\n\nYes: Back to Main Menu\nNo: Exit Application\nCancel: Stay", icon='question')
+        if response is None:  # Cancel pressed, do nothing
+            return
+        elif response:  # Yes pressed, disconnect and return to login
+            if self.db_connection:
+                self.db_connection.disconnect()
+            self.create_main_screen()
         else:  # No pressed, exit application
             if self.db_connection:
                 self.db_connection.disconnect()
