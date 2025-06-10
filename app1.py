@@ -2,11 +2,9 @@ import customtkinter as ctk
 import tkinter as tk
 from tkinter import messagebox, filedialog, simpledialog
 from PIL import Image
-import platform
-import csv, os, json
+import csv, os, json, platform
 from pathlib import Path
 from db.db_connection import SwiggyDBConnection
-from datetime import datetime
 
 
 class SwiggyApp(ctk.CTk):

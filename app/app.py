@@ -1,11 +1,9 @@
 import customtkinter as ctk
 import tkinter as tk
-from tkinter import messagebox
+from tkinter import messagebox, filedialog, simpledialog
 from PIL import Image
-import platform
-import json
-import sys
-import os
+import csv, os, sys, json, platform
+from pathlib import Path
 # Add project root to sys.path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from db.db_connection import SwiggyDBConnection
@@ -399,6 +397,10 @@ class SwiggyApp(ctk.CTk):
 
         self.bind("<Escape>", escape_popup)
 
+        self.latest_query_results = []
+        self.latest_query_columns = []
+        self.query_executed_successfully = False
+
         # Title
         title_label = ctk.CTkLabel(self.main_frame, text="📊 Fetch Table Data", font=("Helvetica", 22, "bold"), text_color="#FFA500")
         title_label.pack(pady=15)
@@ -517,14 +519,27 @@ class SwiggyApp(ctk.CTk):
         # canvas.bind_all("<Button-6>", _on_linux_horiz_scroll)  # horizontal scroll left
         # canvas.bind_all("<Button-7>", _on_linux_horiz_scroll)  # horizontal scroll right
 
-
+        self.export_button = ctk.CTkButton(
+            self.main_frame,
+            text="Export to CSV",
+            command=self.export_query_result_to_csv,
+            fg_color="#1c8adb",
+            hover_color="#146baf",
+            font=("Helvetica", 14, "bold"),
+            width=180
+        )
+        self.export_button.pack(pady=10)
+        self.export_button.pack_forget()
         
     # Submit Button
     def submit_query(self):
         # Clear old content in output_frame
         for widget in self.output_frame.winfo_children():
             widget.destroy()
-
+        
+        self.export_button.pack_forget()
+        self.query_executed_successfully = False
+        
         table_name = self.table_var.get().strip()
         columns_input = self.columns_var.get().strip()
         columns = tuple(col.strip() for col in columns_input.split(",")) if columns_input else None
@@ -563,6 +578,10 @@ class SwiggyApp(ctk.CTk):
             else:  # Show all columns
                 columns_list = self.db_connection.fetch_table_columns(table_name)
 
+            self.latest_query_results = rows
+            self.latest_query_columns = columns_list
+            self.query_executed_successfully = True
+
             # Column Headers
             for j, col_name in enumerate(columns_list):
                 header = ctk.CTkLabel(self.output_frame, text=col_name, font=("Helvetica", 13, "bold"))
@@ -574,6 +593,7 @@ class SwiggyApp(ctk.CTk):
                     label = ctk.CTkLabel(self.output_frame, text=str(value), wraplength=250)
                     label.grid(row=i, column=j, padx=10, pady=3)
 
+            self.export_button.pack(pady=10)
         except Exception as e:
             messagebox.showerror("Fetch Error", str(e))
 
@@ -581,12 +601,22 @@ class SwiggyApp(ctk.CTk):
         self.clear_frame(self.main_frame)
         self.protocol("WM_DELETE_WINDOW", self.show_escape_to_main) 
         self._center_window(self, 700, 900)
-        
+
         def escape_popup(event=None):
             if messagebox.askyesno("Go Back", "Do you want to return to the main menu?"):
                 self.create_main_screen()
 
         self.bind("<Escape>", escape_popup)
+
+        self.latest_query_results = []
+        self.latest_query_columns = []
+        self.query_executed_successfully = False
+
+        # Load query history
+        self.query_history_file = "query_history.json"
+        if not os.path.exists(self.query_history_file):
+            with open(self.query_history_file, "w") as f:
+                json.dump([], f)
 
         # Title
         title_label = ctk.CTkLabel(self.main_frame, text="🧠 Run Custom SQL Query", font=("Helvetica", 22, "bold"), text_color="#FFA500")
@@ -600,18 +630,50 @@ class SwiggyApp(ctk.CTk):
         ctk.CTkLabel(input_frame, text="Enter MySQL Query:", font=("Helvetica", 14), text_color="white").pack(anchor="w", padx=10, pady=5)
         self.query_textbox = ctk.CTkTextbox(input_frame, height=120, font=("Courier", 13), fg_color="#252525", text_color="white", border_color="#FFA500", border_width=2)
         self.query_textbox.pack(padx=10, pady=5, fill="x")
+        # self.query_textbox.insert("1.0", "-- Example: SELECT * FROM your_table;")
+        
+        # Save Query Button
+        ctk.CTkButton(
+            input_frame,
+            text="📂 Save Query",
+            command=self.save_query,
+            fg_color="#28a745",
+            hover_color="#1e7e34",
+            font=("Helvetica", 14, "bold")
+        ).pack(pady=5)
 
         # Run button
-        run_button = ctk.CTkButton(
+        ctk.CTkButton(
             input_frame,
-            text="Run Query",
+            text="▶ Run Query",
             command=self.submit_custom_query,
             fg_color="#FFA500",
             hover_color="#cc8400",
             font=("Helvetica", 15, "bold"),
             width=200
-        )
-        run_button.pack(pady=10)
+        ).pack(pady=10)
+
+        # Collapsible Query History
+        sidebar_frame = ctk.CTkFrame(self.main_frame, fg_color="#1c1c1c")
+        sidebar_frame.pack(fill="x", padx=20, pady=10)
+
+        self.history_visible = tk.BooleanVar(value=False)
+
+        def toggle_history():
+            if self.history_visible.get():
+                self.query_history_container.pack_forget()
+                toggle_btn.configure(text="▶ Show Query History")
+            else:
+                self.query_history_container.pack(fill="x", padx=10, pady=5)
+                toggle_btn.configure(text="▼ Hide Query History")
+            self.history_visible.set(not self.history_visible.get())
+
+
+        toggle_btn = ctk.CTkButton(sidebar_frame, text="▶ Show Query History", command=toggle_history, font=("Helvetica", 14), width=200)
+        toggle_btn.pack(anchor="w", padx=10, pady=5)
+
+        self.query_history_container = ctk.CTkScrollableFrame(sidebar_frame, fg_color="#252525", height=250)
+        self.load_query_history()
 
         # Output Frame Setup
         output_container = ctk.CTkFrame(self.main_frame, fg_color="#252525", corner_radius=15)
@@ -632,13 +694,12 @@ class SwiggyApp(ctk.CTk):
         self.output_frame.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
         canvas.create_window((0, 0), window=self.output_frame, anchor="nw")
 
-        # Scroll bindings
         def _on_mousewheel(event): canvas.yview_scroll(int(-1*(event.delta/120)), "units")
         def _on_shift_mousewheel(event): canvas.xview_scroll(int(-1*(event.delta/120)), "units")
         def _on_linux_scroll(event):
             if event.num == 4: canvas.yview_scroll(-1, "units")
             elif event.num == 5: canvas.yview_scroll(1, "units")
-        # Scroll bindings only active when cursor is over the canvas
+
         canvas.bind("<Enter>", lambda e: (
             canvas.bind("<MouseWheel>", _on_mousewheel),
             canvas.bind("<Shift-MouseWheel>", _on_shift_mousewheel),
@@ -652,10 +713,153 @@ class SwiggyApp(ctk.CTk):
             canvas.unbind("<Button-5>")
         ))
 
+        self.export_button = ctk.CTkButton(
+            self.main_frame,
+            text="Export to CSV",
+            command=self.export_query_result_to_csv,
+            fg_color="#1c8adb",
+            hover_color="#146baf",
+            font=("Helvetica", 14, "bold"),
+            width=180
+        )
+        self.export_button.pack(pady=10)
+        self.export_button.pack_forget()
 
+    def save_query(self):
+        query = self.query_textbox.get("1.0", "end").strip()
+        if not query:
+            messagebox.showwarning("Input Error", "Query is empty. Please enter a valid SQL query.")
+            return
+    
+        try:
+            results = self.db_connection.fetch_query_result(query)
+            if not results:
+                messagebox.showwarning("No Results", "Query executed but returned no results. Cannot save.")
+                return
+            # Ask for title
+            title = simpledialog.askstring("Save Query", "Enter a title for this query:")
+            if not title:
+                messagebox.showwarning("Missing Info", "Both title and query are required.")
+                return
+    
+            # Load existing history
+            try:
+                with open(self.query_history_file, "r") as f:
+                    try:
+                        history = json.load(f)
+                    except json.JSONDecodeError:
+                        print("No history")
+                        history = []
+            except FileNotFoundError:
+                history = []
+    
+            history.append({"title": title, "query": query})
+    
+            with open(self.query_history_file, "w") as f:
+                json.dump(history, f, indent=4)
+
+            self.load_query_history()
+            messagebox.showinfo("Saved", f"Query '{title}' saved successfully.")
+    
+        except Exception as e:
+            messagebox.showerror("Execution Failed", f"Query could not be executed.\nError: {e}")
+
+    
+    def load_query_history(self):
+        for widget in self.query_history_container.winfo_children():
+            widget.destroy()
+        # with open(self.query_history_file) as f:
+        #     history = json.load(f)
+        try:
+            with open(self.query_history_file) as f:
+                try:
+                    history = json.load(f)
+                except json.JSONDecodeError:
+                    history = []  # Empty or invalid file
+        except FileNotFoundError:
+            history = []
+            
+        for index, item in enumerate(history):
+            row = ctk.CTkFrame(self.query_history_container, fg_color="#333")
+            row.pack(fill="x", pady=2)
+            
+            def run_saved_query(query=item["query"]):
+                self.query_textbox.delete("1.0", tk.END)
+                self.query_textbox.insert("1.0", query)
+                self.submit_custom_query()  # Run immediately
+
+            ctk.CTkLabel(row, text=item['title'], font=("Helvetica", 12), text_color="white", anchor="w", width=200).pack(side="left", padx=5)
+            ctk.CTkButton(row, text="▶", width=30, command=lambda q=item['query']: run_saved_query(q)).pack(side="left")
+            ctk.CTkButton(row, text="✏", width=30, command=lambda i=index: self.edit_query(i)).pack(side="left")
+            ctk.CTkButton(row, text="🗑", width=30, command=lambda i=index: self.delete_query(i)).pack(side="left")
+    
+    def edit_query(self, index):
+        with open(self.query_history_file, "r+") as f:
+            try:
+                history = json.load(f)
+            except json.JSONDecodeError:
+                messagebox.showerror("Error", "Could not read query history.")
+                return
+    
+            if index >= len(history):
+                messagebox.showerror("Error", "Query not found.")
+                return
+    
+            old_title = history[index]["title"]
+            old_query = history[index]["query"]
+    
+            new_title = simpledialog.askstring("Edit Query Title", "Update the title:", initialvalue=old_title)
+            if new_title is None:
+                return
+    
+            new_query = simpledialog.askstring("Edit SQL Query", "Update the SQL query:", initialvalue=old_query)
+            if new_query is None:
+                return
+    
+            try:
+                results = self.db_connection.fetch_query_result(new_query)
+            except Exception as e:
+                messagebox.showerror("Query Failed", f"Failed to execute updated query:\n\n{e}")
+                return
+    
+            if not results:
+                messagebox.showinfo("No Results", "The updated query returned no results and will not be saved.")
+                return
+    
+            # If query is valid and returns data, update and save
+            history[index]["title"] = new_title
+            history[index]["query"] = new_query
+    
+            f.seek(0)
+            f.truncate()
+            json.dump(history, f, indent=2)
+    
+        self.load_query_history()
+        messagebox.showinfo("Query Updated", "Query updated and validated successfully.")
+
+
+    def delete_query(self, index):
+        if messagebox.askyesno("Delete Query", "Are you sure you want to delete this saved query?"):
+            with open(self.query_history_file, "r+") as f:
+                try:
+                    history = json.load(f)
+                except json.JSONDecodeError:
+                    history = []
+
+                if index < len(history):
+                    del history[index]
+
+                f.seek(0)
+                f.truncate()
+                json.dump(history, f, indent=2)
+
+            self.load_query_history()
+            
     def submit_custom_query(self):
         for widget in self.output_frame.winfo_children():
             widget.destroy()
+        self.export_button.pack_forget()
+        self.query_executed_successfully = False
 
         query = self.query_textbox.get("1.0", "end").strip()
         if not query:
@@ -670,10 +874,11 @@ class SwiggyApp(ctk.CTk):
                 messagebox.showinfo("Query Result", "No data returned.")
                 return
 
-            if cursor_description:
-                columns = [desc[0] for desc in cursor_description]
-            else:
-                columns = [f"Column {i+1}" for i in range(len(results[0]))]
+            columns = [desc[0] for desc in cursor_description] if cursor_description else [f"Column {i+1}" for i in range(len(results[0]))]
+
+            self.latest_query_results = results
+            self.latest_query_columns = columns
+            self.query_executed_successfully = True
 
             for j, col_name in enumerate(columns):
                 header = ctk.CTkLabel(self.output_frame, text=col_name, font=("Helvetica", 13, "bold"), text_color="#FFA500", bg_color="#252525")
@@ -684,9 +889,33 @@ class SwiggyApp(ctk.CTk):
                     label = ctk.CTkLabel(self.output_frame, text=str(value), wraplength=250, font=("Helvetica", 12), text_color="white", bg_color="#252525")
                     label.grid(row=i, column=j, padx=10, pady=3)
 
+            self.export_button.pack(pady=10)
+
         except Exception as e:
             messagebox.showerror("Query Execution Error", str(e))
 
+    def export_query_result_to_csv(self):
+        if not self.latest_query_results or not self.latest_query_columns:
+            messagebox.showwarning("Export Error", "No results to export.")
+            return
+
+        downloads_path = str(Path.home() / "Downloads")
+        file_path = filedialog.asksaveasfilename(
+            initialdir=downloads_path,
+            defaultextension=".csv",
+            filetypes=[("CSV Files", "*.csv")],
+            title="Save query result as..."
+        )
+
+        if file_path:
+            try:
+                with open(file_path, "w", newline='', encoding="utf-8") as f:
+                    writer = csv.writer(f)
+                    writer.writerow(self.latest_query_columns)
+                    writer.writerows(self.latest_query_results)
+                messagebox.showinfo("Export Successful", f"Results exported to {file_path}")
+            except Exception as e:
+                messagebox.showerror("Export Failed", str(e))
 
 
     def show_escape_options(self, event=None):
