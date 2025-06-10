@@ -41,14 +41,17 @@ A full-fledged Swiggy data analysis application built with Python and MySQL, fea
 
 ### Run Custom SQL Query
 
-![Run Custom SQL Query](assets/screenshots/run_custom_query_page.png)
+![Run Custom SQL Query](assets/screenshots/custom_query.png)
+
+### Saved Queries
+
+![Saved Queries](assets/screenshots/saved_queries.png)
 
 
 ---
 
 ## 📁 Project Structure
 
-Swiggy-Analysis-with-Python/
 
     Swiggy-Analysis-with-Python/
     ├── db/
@@ -61,7 +64,8 @@ Swiggy-Analysis-with-Python/
     │       └── swiggy_data_analysis_dashboard.png
     │       └── show_schema_page.png
     │       └── fetch_table_data_page.png
-    │       └── run_custom_query_page.png
+    │       └── custom_query.png
+    │       └── saved_query.png
     ├── app/
     │   ├── app.py
     │   └── credentials/
@@ -70,6 +74,8 @@ Swiggy-Analysis-with-Python/
     │   └── Swiggy_Analysis_Source_File.csv
     ├── notebooks/
     │   └── swiggy_db.ipynb
+    ├── queries/
+    │   └── query_history.json
     ├── requirements.txt
     ├── setup.sh
     └── README.md
