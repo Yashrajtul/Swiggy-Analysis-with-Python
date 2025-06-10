@@ -397,6 +397,10 @@ class SwiggyApp(ctk.CTk):
 
         self.bind("<Escape>", escape_popup)
 
+        self.latest_query_results = []
+        self.latest_query_columns = []
+        self.query_executed_successfully = False
+
         # Title
         title_label = ctk.CTkLabel(self.main_frame, text="📊 Fetch Table Data", font=("Helvetica", 22, "bold"), text_color="#FFA500")
         title_label.pack(pady=15)
@@ -515,14 +519,27 @@ class SwiggyApp(ctk.CTk):
         # canvas.bind_all("<Button-6>", _on_linux_horiz_scroll)  # horizontal scroll left
         # canvas.bind_all("<Button-7>", _on_linux_horiz_scroll)  # horizontal scroll right
 
-
+        self.export_button = ctk.CTkButton(
+            self.main_frame,
+            text="Export to CSV",
+            command=self.export_query_result_to_csv,
+            fg_color="#1c8adb",
+            hover_color="#146baf",
+            font=("Helvetica", 14, "bold"),
+            width=180
+        )
+        self.export_button.pack(pady=10)
+        self.export_button.pack_forget()
         
     # Submit Button
     def submit_query(self):
         # Clear old content in output_frame
         for widget in self.output_frame.winfo_children():
             widget.destroy()
-
+        
+        self.export_button.pack_forget()
+        self.query_executed_successfully = False
+        
         table_name = self.table_var.get().strip()
         columns_input = self.columns_var.get().strip()
         columns = tuple(col.strip() for col in columns_input.split(",")) if columns_input else None
@@ -561,6 +578,10 @@ class SwiggyApp(ctk.CTk):
             else:  # Show all columns
                 columns_list = self.db_connection.fetch_table_columns(table_name)
 
+            self.latest_query_results = rows
+            self.latest_query_columns = columns_list
+            self.query_executed_successfully = True
+
             # Column Headers
             for j, col_name in enumerate(columns_list):
                 header = ctk.CTkLabel(self.output_frame, text=col_name, font=("Helvetica", 13, "bold"))
@@ -572,6 +593,7 @@ class SwiggyApp(ctk.CTk):
                     label = ctk.CTkLabel(self.output_frame, text=str(value), wraplength=250)
                     label.grid(row=i, column=j, padx=10, pady=3)
 
+            self.export_button.pack(pady=10)
         except Exception as e:
             messagebox.showerror("Fetch Error", str(e))
 
@@ -760,11 +782,17 @@ class SwiggyApp(ctk.CTk):
         for index, item in enumerate(history):
             row = ctk.CTkFrame(self.query_history_container, fg_color="#333")
             row.pack(fill="x", pady=2)
+            
+            def run_saved_query(query=item["query"]):
+                self.query_textbox.delete("1.0", tk.END)
+                self.query_textbox.insert("1.0", query)
+                self.submit_custom_query()  # Run immediately
+
             ctk.CTkLabel(row, text=item['title'], font=("Helvetica", 12), text_color="white", anchor="w", width=200).pack(side="left", padx=5)
-            ctk.CTkButton(row, text="▶", width=30, command=lambda q=item['query']: self.query_textbox.delete("1.0", "end") or self.query_textbox.insert("1.0", q)).pack(side="left")
+            ctk.CTkButton(row, text="▶", width=30, command=lambda q=item['query']: run_saved_query(q)).pack(side="left")
             ctk.CTkButton(row, text="✏", width=30, command=lambda i=index: self.edit_query(i)).pack(side="left")
             ctk.CTkButton(row, text="🗑", width=30, command=lambda i=index: self.delete_query(i)).pack(side="left")
-
+    
     def edit_query(self, index):
         with open(self.query_history_file, "r+") as f:
             try:
