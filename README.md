@@ -63,7 +63,7 @@ A full-fledged Swiggy data analysis application built with Python and MySQL, fea
     │       └── login_screen.png
     │       └── swiggy_data_analysis_dashboard.png
     │       └── show_schema_page.png
-    │       └── fetch_table_data_page.png
+    │       └── fetch_table_data.png
     │       └── custom_query.png
     │       └── saved_query.png
     ├── app/
