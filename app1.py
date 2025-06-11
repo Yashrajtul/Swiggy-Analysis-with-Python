@@ -696,24 +696,37 @@ class SwiggyApp(ctk.CTk):
         self.output_frame.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
         canvas.create_window((0, 0), window=self.output_frame, anchor="nw")
 
-        def _on_mousewheel(event): canvas.yview_scroll(int(-1*(event.delta/120)), "units")
-        def _on_shift_mousewheel(event): canvas.xview_scroll(int(-1*(event.delta/120)), "units")
-        def _on_linux_scroll(event):
-            if event.num == 4: canvas.yview_scroll(-1, "units")
-            elif event.num == 5: canvas.yview_scroll(1, "units")
+        # Bindings for scrolling:
 
-        canvas.bind("<Enter>", lambda e: (
-            canvas.bind("<MouseWheel>", _on_mousewheel),
-            canvas.bind("<Shift-MouseWheel>", _on_shift_mousewheel),
-            canvas.bind("<Button-4>", _on_linux_scroll),
-            canvas.bind("<Button-5>", _on_linux_scroll)
-        ))
-        canvas.bind("<Leave>", lambda e: (
-            canvas.unbind("<MouseWheel>"),
-            canvas.unbind("<Shift-MouseWheel>"),
-            canvas.unbind("<Button-4>"),
-            canvas.unbind("<Button-5>")
-        ))
+        # Vertical scroll (mouse wheel)
+        def _on_mousewheel(event):
+            canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+
+        # Horizontal scroll (Shift + mouse wheel)
+        def _on_shift_mousewheel(event):
+            canvas.xview_scroll(int(-1 * (event.delta / 120)), "units")
+
+        # Linux vertical scroll (Button 4 and 5)
+        def _on_linux_scroll(event):
+            if event.num == 4:
+                canvas.yview_scroll(-1, "units")
+            elif event.num == 5:
+                canvas.yview_scroll(1, "units")
+
+        # Linux horizontal scroll (Button 6 and 7)
+        # def _on_linux_horiz_scroll(event):
+        #     if event.num == 6:
+        #         canvas.xview_scroll(-1, "units")
+        #     elif event.num == 7:
+        #         canvas.xview_scroll(1, "units")
+
+        # Bind scroll events globally to canvas
+        canvas.bind_all("<MouseWheel>", _on_mousewheel)
+        canvas.bind_all("<Shift-MouseWheel>", _on_shift_mousewheel)
+        canvas.bind_all("<Button-4>", _on_linux_scroll)   # scroll up
+        canvas.bind_all("<Button-5>", _on_linux_scroll)   # scroll down
+        # canvas.bind_all("<Button-6>", _on_linux_horiz_scroll)  # horizontal scroll left
+        # canvas.bind_all("<Button-7>", _on_linux_horiz_scroll)  # horizontal scroll right
 
         self.export_button = ctk.CTkButton(
             self.main_frame,
