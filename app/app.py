@@ -46,10 +46,11 @@ class SwiggyApp(ctk.CTk):
         self.splash = ctk.CTkToplevel(self)
         self.splash.overrideredirect(True)
 
-        width, height = 600, 350
-        x = (self.winfo_screenwidth() - width) // 2
-        y = (self.winfo_screenheight() - height) // 2
-        self.splash.geometry(f"{width}x{height}+{x}+{y}")
+        self._center_window(self.splash, 600, 350)
+        # width, height = 600, 350
+        # x = (self.winfo_screenwidth() - width) // 2
+        # y = (self.winfo_screenheight() - height) // 2
+        # self.splash.geometry(f"{width}x{height}+{x}+{y}")
         self.splash.configure(fg_color="#FFF3C7")
 
         frame = ctk.CTkFrame(self.splash, corner_radius=20, fg_color="#FFF3C7")
@@ -58,7 +59,7 @@ class SwiggyApp(ctk.CTk):
         try:
             logo = self.load_image("assets/swiggy.png", (120, 80))
             logo_label = ctk.CTkLabel(frame, image=logo, text="")
-            logo_label.image = logo
+            # logo_label.image = logo
             logo_label.pack(pady=(10, 15))
         except Exception as e:
             print(f"Logo load error: {e}")
@@ -95,9 +96,9 @@ class SwiggyApp(ctk.CTk):
         self.login_frame.place(relx=0.5, rely=0.5, anchor="center", relwidth=0.85, relheight=0.85)
 
         try:
-            logo = self.load_image("assets/swiggy.png", (150, 80))
+            logo = self.load_image("assets/swiggy.png", (120, 80))
             logo_label = ctk.CTkLabel(self.login_frame, image=logo, text="")
-            logo_label.image = logo
+            # logo_label.image = logo
             logo_label.pack(pady=(20, 10))
         except:
             
