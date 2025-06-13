@@ -23,10 +23,12 @@ class SwiggyApp(ctk.CTk):
         # Close button validation
         # self.protocol("WM_DELETE_WINDOW", self.confirm_exit)
 
+    # Load Image util
     def load_image(self, path, size):
         img = Image.open(path).convert("RGBA").resize(size, Image.LANCZOS)
         return ctk.CTkImage(light_image=img, dark_image=img, size=size)
 
+    # Center window util
     def _center_window(self, window, width, height):
         screen_width = window.winfo_screenwidth()
         screen_height = window.winfo_screenheight()
@@ -37,7 +39,8 @@ class SwiggyApp(ctk.CTk):
     def clear_window(self):
         for widget in self.winfo_children():
             widget.destroy()
-            
+    
+    # Clear frame util     
     def clear_frame(self, frame):
         for widget in frame.winfo_children():
             widget.destroy()
@@ -81,7 +84,7 @@ class SwiggyApp(ctk.CTk):
             text_color="#1A1A1A").pack(pady=(5, 10))
 
         self.splash.after(3000, lambda: [self.splash.destroy(), self.create_login_screen()])
-        
+
     def create_login_screen(self):
         self.deiconify()
         self.protocol("WM_DELETE_WINDOW", self.confirm_exit)
@@ -98,10 +101,8 @@ class SwiggyApp(ctk.CTk):
         try:
             logo = self.load_image("assets/swiggy.png", (120, 80))
             logo_label = ctk.CTkLabel(self.login_frame, image=logo, text="")
-            # logo_label.image = logo
             logo_label.pack(pady=(20, 10))
         except:
-            
             ctk.CTkLabel(self.login_frame, text="Swiggy", font=("Segoe UI", 28, "bold"), text_color="#FF5722").pack(pady=(20, 10))
 
         ctk.CTkLabel(self.login_frame, text="Login to Swiggy DB", font=("Segoe UI", 24, "bold"), text_color="#333").pack(pady=(5, 20))
@@ -114,45 +115,147 @@ class SwiggyApp(ctk.CTk):
 
         self.saved_credentials = self._load_saved_credentials()
 
-        self._labeled_entry(self.login_frame, "Host", self.host_var, options=self.saved_credentials.get("host"))
-        self._labeled_entry(self.login_frame, "Username", self.user_var, options=self.saved_credentials.get("user"))
+        self._labeled_entry(self.login_frame, "Host", self.host_var, suggestions=self.saved_credentials.get("host"))
+        self._labeled_entry(self.login_frame, "Username", self.user_var, suggestions=self.saved_credentials.get("user"))
         self._labeled_entry(self.login_frame, "Password", self.pass_var, show="*")
-        self._labeled_entry(self.login_frame, "Database", self.db_var, options=self.saved_credentials.get("database"))
-
-        self.remember_var = ctk.BooleanVar()
-        ctk.CTkCheckBox(self.login_frame, text="Remember Host/User/Database", variable=self.remember_var, text_color='#555').pack(pady=(10, 5))
+        self._labeled_entry(self.login_frame, "Database", self.db_var, suggestions=self.saved_credentials.get("database"))
 
         self.login_btn = ctk.CTkButton(self.login_frame, text="Connect", command=self.submit_credentials, font=("Segoe UI", 16, "bold"), corner_radius=10, fg_color="#FF7F50", hover_color="#FF5722")
         self.login_btn.pack(pady=(20, 30), ipadx=10, ipady=6)
 
         for i, entry in enumerate(self.entry_list):
             entry.bind("<Return>", lambda e, idx=i: self.entry_list[idx + 1].focus() if idx + 1 < len(self.entry_list) else [self.login_btn.focus(), self.submit_credentials()])
-            entry.bind("<Down>", lambda e, idx=i: self.entry_list[idx + 1].focus() if idx + 1 < len(self.entry_list) else self.entry_list[idx].focus())
             entry.bind("<Up>", lambda e, idx=i: self.entry_list[idx - 1].focus() if idx - 1 >= 0 else self.entry_list[idx].focus())
 
         if self.entry_list:
             self.entry_list[0].focus()
-            
+
         self.bind("<Escape>", self.confirm_exit)
 
-    def _labeled_entry(self, parent, label_text, variable, show=None, options=None):
+    def _labeled_entry(self, parent, label_text, variable, show=None, suggestions=None):
         container = ctk.CTkFrame(parent, fg_color="transparent")
         container.pack(pady=5, fill="x", padx=40)
         ctk.CTkLabel(container, text=label_text, anchor="w", font=("Segoe UI", 12), text_color="#555").pack(anchor="w")
+    
+        entry = ctk.CTkEntry(container, textvariable=variable, show=show, font=("Segoe UI", 12))
+        entry.pack(fill="x")
+        self.entry_list.append(entry)
+    
+        if suggestions:
+            listbox_frame = tk.Frame(container, bg="white")
+            scrollbar = tk.Scrollbar(listbox_frame, orient="vertical")
+            listbox = tk.Listbox(listbox_frame, height=0, yscrollcommand=scrollbar.set, activestyle="dotbox", exportselection=False)
+            scrollbar.config(command=listbox.yview)
+            scrollbar.pack(side="right", fill="y")
+            listbox.pack(side="left", fill="both", expand=True)
+            listbox_frame.pack_forget()
+    
+            def show_suggestions(event=None):
+                typed = entry.get()
+                if not typed:
+                    listbox_frame.pack_forget()
+                    return
+                matches = [val for val in suggestions if val.lower().startswith(typed.lower()) and val.lower() != typed.lower()]
+                listbox.delete(0, tk.END)
+                if matches:
+                    for val in matches:
+                        listbox.insert(tk.END, val)
+                    visible_count = min(len(matches), 3)
+                    listbox.config(height=visible_count)
+                    listbox_frame.pack(fill="x")
+                    if len(matches) > 3:
+                        scrollbar.pack(side="right", fill="y")
+                    else:
+                        scrollbar.pack_forget()
+                else:
+                    listbox_frame.pack_forget()
+    
+            def autocomplete(event=None):
+                if listbox.curselection():
+                    entry.delete(0, tk.END)
+                    entry.insert(0, listbox.get(listbox.curselection()))
+                    listbox_frame.pack_forget()
+    
+            def navigate_suggestions(event):
+                if listbox.size() > 0:
+                    listbox.focus_set()
+                    current = listbox.curselection()
+                    if not current:
+                        listbox.selection_set(0)
+                        listbox.activate(0)
+                    else:
+                        next_index = (current[0] + 1) % listbox.size()
+                        listbox.selection_clear(0, tk.END)
+                        listbox.selection_set(next_index)
+                        listbox.activate(next_index)
+                    return "break"
+            
+            def on_down(event):
+                if listbox.size() > 0:
+                    return navigate_suggestions(event)
+                idx = self.entry_list.index(entry)
+                if idx + 1 < len(self.entry_list):
+                    self.entry_list[idx + 1].focus()
+                else:
+                    self.login_btn.focus()
+                return "break"
 
-        if options:
-            combo = ctk.CTkComboBox(container, variable=variable, values=options, font=("Segoe UI", 12))
-            combo.pack(fill="x")
-            self.entry_list.append(combo)
+    
+            def select_from_list(event=None):
+                if listbox.curselection():
+                    entry.delete(0, tk.END)
+                    entry.insert(0, listbox.get(listbox.curselection()))
+                    listbox_frame.pack_forget()
+                    entry.focus_set()
+    
+            entry.bind("<KeyRelease>", show_suggestions)
+            entry.bind("<Down>", on_down)
+            entry.bind("<Return>", autocomplete)
+    
+            listbox.bind("<ButtonRelease-1>", select_from_list)
+            listbox.bind("<Return>", select_from_list)
+            listbox.bind("<Up>", lambda e: move_selection(listbox, up=True))
+            listbox.bind("<Down>", lambda e: move_selection(listbox, up=False))
+            listbox.bind("<Return>", select_from_list)
+            
+            def move_selection(lb, up=False):
+                current = lb.curselection()
+                if current:
+                    index = current[0] - 1 if up else current[0] + 1
+                else:
+                    index = 0
+                if 0 <= index < lb.size():
+                    lb.selection_clear(0, tk.END)
+                    lb.selection_set(index)
+                    lb.activate(index)
+
+    
+            # Hide suggestion box if entry loses focus and listbox isn't clicked
+            entry.bind("<FocusOut>", lambda e: self.after(100, lambda: self._safe_hide_listbox(listbox, listbox_frame)))
+            listbox.bind("<FocusOut>", lambda e: listbox_frame.pack_forget())
+          
         else:
-            entry = ctk.CTkEntry(container, textvariable=variable, show=show, font=("Segoe UI", 12))
-            entry.pack(fill="x")
-            self.entry_list.append(entry)
+            def fallback_on_down(event):
+                idx = self.entry_list.index(entry)
+                if idx + 1 < len(self.entry_list):
+                    self.entry_list[idx + 1].focus()
+                else:
+                    self.login_btn.focus()
+                return "break"
+            entry.bind("<Down>", fallback_on_down)
+        entry.bind("<Return>", lambda e: None)  # Optional, to prevent default beep on Return
 
-    def _load_saved_credentials(self):
+    def _safe_hide_listbox(self, listbox, frame):
         try:
-            if os.path.exists(os.path.join("app/credentials","credentials.json")):
-                with open(os.path.join("app/credentials","credentials.json"), "r") as f:
+            if not listbox.focus_get():
+                frame.pack_forget()
+        except Exception:
+            pass  # Suppress TclErrors if widgets are already destroyed
+    
+    def _load_saved_credentials(self):  # ✅ Now properly defined as a method
+        try:
+            if os.path.exists(os.path.join("app/credentials", "credentials.json")):
+                with open(os.path.join("app/credentials", "credentials.json"), "r") as f:
                     return json.load(f)
         except:
             pass
@@ -163,11 +266,22 @@ class SwiggyApp(ctk.CTk):
         for key, val in zip(["host", "user", "database"], [host, user, database]):
             if val and val not in creds[key]:
                 creds[key].insert(0, val)
-                creds[key] = creds[key][:5]  # keep only last 5 entries
-        
+                creds[key] = creds[key][:5]
+
         os.makedirs("app/credentials", exist_ok=True)
         with open(os.path.join("app/credentials","credentials.json"), "w") as f:
             json.dump(creds, f)
+
+    def _autocomplete_entry(self, entry_widget, creds_dict, index):
+        label_map = ["host", "user", None, "database"]
+        key = label_map[index]
+        if key is None:
+            return
+        typed = entry_widget.get()
+        matches = [val for val in creds_dict.get(key, []) if val.startswith(typed)]
+        if matches:
+            entry_widget.delete(0, "end")
+            entry_widget.insert(0, matches[0])
 
     def confirm_exit(self, event=None):
         try:
@@ -175,7 +289,7 @@ class SwiggyApp(ctk.CTk):
                 if messagebox.askyesno("Exit", "Are you sure you want to exit?"):
                     self.destroy()
         except tk.TclError:
-            pass  # Window already destroyed, ignore
+            pass
 
     def submit_credentials(self):
         host = self.host_var.get().strip()
@@ -193,26 +307,18 @@ class SwiggyApp(ctk.CTk):
         ctk.CTkLabel(loading_popup, text="Connecting to database...").pack(pady=30)
         loading_popup.update_idletasks()
 
-        try:
-            self.db_connection = SwiggyDBConnection(host, user, password, database)
-            loading_popup.destroy()
-            if self.remember_var.get():
-                self._save_credentials(host, user, database)
-            messagebox.showinfo("Success", "Connected successfully!")
-            self.create_main_screen()
-        except Exception as e:
-            loading_popup.destroy()
-            messagebox.showerror("Connection Failed", f"Failed to connect to the database.\n\n{str(e)}")
+        self.after(100, lambda: self.try_db_connection(host, user, password, database, loading_popup))
 
     def try_db_connection(self, host, user, password, database, popup):
         try:
             self.db_connection = SwiggyDBConnection(host, user, password, database)
             popup.destroy()
             messagebox.showinfo("Success", "Connected successfully!")
+            self._save_credentials(host, user, database)
             self.create_main_screen()
         except Exception as e:
             popup.destroy()
-            messagebox.showerror("Connection Failed", str(e))
+            messagebox.showerror("Connection Failed", f"Failed to connect to the database.\n\n{str(e)}")
 
     def create_main_screen(self):
         self.title("Swiggy Dashboard")
@@ -230,7 +336,7 @@ class SwiggyApp(ctk.CTk):
         try:
             logo = self.load_image("assets/swiggy.png", (120, 80))
             logo_label = ctk.CTkLabel(self.main_frame, image=logo, text="")
-            logo_label.image = logo
+            # logo_label.image = logo
             logo_label.pack(pady=(20, 10))
         except:
             ctk.CTkLabel(self.main_frame, text="Swiggy", font=("Segoe UI", 28, "bold"), text_color="#FF5722").pack(pady=(20, 10))
@@ -772,7 +878,7 @@ class SwiggyApp(ctk.CTk):
                 history = []
     
             history.append({"title": title, "query": query})
-    
+
             os.makedirs("queries", exist_ok=True)
             with open(self.query_history_file, "w") as f:
                 json.dump(history, f, indent=4)
@@ -795,12 +901,12 @@ class SwiggyApp(ctk.CTk):
                     history = json.load(f)
                 except json.JSONDecodeError:
                     history = []  # Empty or invalid file
-        except FileNotFoundError:
+        except Exception as e:
             history = []
             
         for index, item in enumerate(history):
             row = ctk.CTkFrame(self.query_history_container, fg_color="#333")
-            row.pack(fill="x", pady=2)
+            row.pack(fill="both", pady=2)
             
             def run_saved_query(query=item["query"]):
                 self.query_textbox.delete("1.0", tk.END)
